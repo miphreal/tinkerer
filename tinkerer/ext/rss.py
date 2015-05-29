@@ -57,7 +57,7 @@ def make_feed_context(app, feed_name, posts):
     # feed items
     context["items"] = []
     for post in posts:
-        link = "%s%s.html" % (app.config.website, post)
+        link = "%s%s%s" % (app.config.website, post, app.config.html_link_suffix)
 
         timestamp = email.utils.formatdate(
             time.mktime(env.blog_metadata[post].date.timetuple()),

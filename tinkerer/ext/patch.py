@@ -17,20 +17,21 @@ import pyquery
 from tinkerer.ext.uistr import UIStr
 
 
-def patch_aggregated_metadata(context):
+def patch_aggregated_metadata(context, app):
     """
     Patches context in aggregated pages
     """
     for metadata in context["posts"]:
         metadata.body = patch_links(
-            metadata.body,
-            metadata.link[:11],  # first 11 characters is path (YYYY/MM/DD/)
-            metadata.link[11:],  # following characters represent filename
-            True)      # hyperlink title to post
+            body=metadata.body,
+            docpath=metadata.link[:11],  # first 11 characters is path (YYYY/MM/DD/)
+            docname=metadata.link[11:],  # following characters represent filename
+            docsuffix=app.config.html_link_suffix,
+            link_title=True)      # hyperlink title to post
         metadata.body = strip_xml_declaration(metadata.body)
 
 
-def patch_links(body, docpath, docname=None, link_title=False,
+def patch_links(body, docpath, docname=None, docsuffix='.html', link_title=False,
                 replace_read_more_link=True):
     '''
     Parses the document body and calls patch_node from the document root
@@ -38,37 +39,37 @@ def patch_links(body, docpath, docname=None, link_title=False,
     XML as string.
     '''
     doc = pyquery.PyQuery(body)
-    patch_node(doc, docpath, docname)
+    patch_node(doc, docpath, docname, docsuffix)
 
     body = doc.html()
     if docname and replace_read_more_link:
-        body = make_read_more_link(body, docpath, docname)
+        body = make_read_more_link(body, docpath, docname, docsuffix)
 
     if link_title:
-        return hyperlink_title(body, docpath, docname)
+        return hyperlink_title(body, docpath, docname, docsuffix)
     else:
         return body
 
 
-def hyperlink_title(body, docpath, docname):
+def hyperlink_title(body, docpath, docname, docsuffix):
     """
     Hyperlink titles by embedding appropriate a tag inside
     h1 tags (which should only be post titles).
     """
-    body = body.replace("<h1>", '<h1><a href="%s.html">' %
-                        (docpath + docname), 1)
+    body = body.replace("<h1>", '<h1><a href="%s%s%s">' %
+                        (docpath, docname, docsuffix), 1)
     body = body.replace("</h1>", "</a></h1>", 1)
     return body
 
 
-def make_read_more_link(body, docpath, docname):
+def make_read_more_link(body, docpath, docname, docsuffix):
     """
     Create "read more" link if marker exists.
     """
     doc = pyquery.PyQuery(body)
     link_p = ('<p class="readmorewrapper"><a class="readmore" '
-              'href="%s.html#more">%s</a></p>' %
-              (docpath + docname, UIStr.READ_MORE))
+              'href="%s%s%s#more">%s</a></p>' %
+              (docpath, docname, docsuffix, UIStr.READ_MORE))
     doc('div#more').replaceWith(link_p)
     doc('p.readmorewrapper').next_all().remove()
     doc('p.readmorewrapper').parents().nextAll().remove()
@@ -83,7 +84,7 @@ def collapse_path(path_url):
     return path.normpath(path_url).replace("\\", "/").replace(":/", "://")
 
 
-def patch_node(node, docpath, docname=None):
+def patch_node(node, docpath, docname=None, docsuffix='.html'):
     for img in node.find('img'):
         src = img.get('src', '')
         if src.startswith(".."):
@@ -110,7 +111,7 @@ def patch_node(node, docpath, docname=None):
             # html anchor with missing post.html
             # e.g. href="2012/08/23/#the-cross-compiler"
             # now href="2012/08/23/a_post.html#the-cross-compiler"
-            ref = ref.replace("/#", "/%s.html#" % docname)
+            ref = ref.replace("/#", "/%s/%s#" % (docname, docsuffix))
 
             # normalize urls so "2012/08/23/../../../_static/" becomes
             # "_static/" - we can use normpath for this, just make sure

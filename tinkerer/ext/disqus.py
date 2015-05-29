@@ -76,9 +76,10 @@ def add_disqus_block(app, pagename, templatename, context, doctree):
 
         # store code required to retrieve comment count for this post in metadata
         env.blog_metadata[pagename].comment_count = get_count(
-                "%s%s.html" % (app.config.website,
-                                env.blog_metadata[pagename].link),
-                pagename)
+            "%s%s%s" % (app.config.website,
+                        env.blog_metadata[pagename].link,
+                        app.config.html_link_suffix),
+            pagename)
 
     # just enable comment counting on the page
     else:

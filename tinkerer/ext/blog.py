@@ -113,7 +113,7 @@ def html_collected_context(app, name, template, context):
     Patches HTML in aggregated pages
     '''
     if template == "aggregated.html":
-        patch.patch_aggregated_metadata(context)
+        patch.patch_aggregated_metadata(context, app)
 
 
 def setup(app):
